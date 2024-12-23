@@ -12,8 +12,10 @@ app.get("/screenshot", async (req, res) => {
         return res.status(400).json({ error: "URL is required" });
     }
 
+    let browser;
     try {
-        const browser = await puppeteer.launch({
+        console.log("Launching browser...");
+        browser = await puppeteer.launch({
             args: chromium.args,
             defaultViewport: chromium.defaultViewport,
             executablePath: await chromium.executablePath(),
@@ -22,30 +24,27 @@ app.get("/screenshot", async (req, res) => {
         });
 
         const page = await browser.newPage();
-
-        // Optimize resource loading
-        await page.setRequestInterception(true);
-        page.on("request", (req) => {
-            if (["stylesheet", "image", "media", "font"].includes(req.resourceType())) {
-                req.abort();
-            } else {
-                req.continue();
-            }
-        });
-
         console.log("Navigating to:", url);
         await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
         console.log("Navigation complete");
 
+        // Set viewport and take screenshot
+        console.log("Starting to take a screenshot...");
+        await page.setViewport({ width: 1920, height: 1080 });
         const screenshot = await page.screenshot({ type: "png" });
+        console.log("Screenshot taken!");
 
-        await browser.close();
-
+        // Send the response
         res.setHeader("Content-Type", "image/png");
         res.send(screenshot);
     } catch (error) {
-        console.error("Error while taking screenshot:", error);
+        console.error("Error while taking screenshot:", error.message);
         res.status(500).json({ error: "An error occurred while taking the screenshot" });
+    } finally {
+        if (browser) {
+            await browser.close();
+            console.log("Browser closed.");
+        }
     }
 });
 
