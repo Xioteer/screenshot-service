@@ -8,12 +8,12 @@ module.exports = async (req, res) => {
             return res.status(400).json({ error: "URL is required" });
         }
 
-        // Launch the browser using chrome-aws-lambda
+        // Launch browser using chrome-aws-lambda
         const browser = await chromium.puppeteer.launch({
             args: chromium.args,
             defaultViewport: chromium.defaultViewport,
-            executablePath: await chromium.executablePath,
-            headless: true
+            executablePath: await chromium.executablePath || '/usr/bin/chromium-browser',
+            headless: chromium.headless,
         });
 
         const page = await browser.newPage();
@@ -27,7 +27,7 @@ module.exports = async (req, res) => {
         res.setHeader('Content-Type', 'image/png');
         res.send(screenshot);
     } catch (error) {
-        console.error(error);
+        console.error('Error while taking the screenshot:', error);
         res.status(500).json({ error: "An error occurred while taking the screenshot" });
     }
 };
