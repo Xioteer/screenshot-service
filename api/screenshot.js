@@ -9,6 +9,7 @@ module.exports = async (req, res) => {
             return res.status(400).json({ error: "URL is required" });
         }
 
+        // Launch Chromium with proper settings
         const browser = await puppeteer.launch({
             args: chromium.args,
             defaultViewport: chromium.defaultViewport,
@@ -29,10 +30,10 @@ module.exports = async (req, res) => {
             }
         });
 
-        // Load page with timeout
+        // Navigate to the URL
         await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 5000 });
 
-        // Take screenshot
+        // Take a screenshot
         const screenshot = await page.screenshot({ type: 'png' });
 
         await browser.close();
