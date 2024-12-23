@@ -26,30 +26,21 @@ app.get("/screenshot", async (req, res) => {
 
         const page = await browser.newPage();
 
-        // Optimize resource loading
-        await page.setRequestInterception(true);
-        page.on("request", (req) => {
-            const blockedTypes = ["stylesheet", "image", "media", "font", "script"];
-            if (blockedTypes.includes(req.resourceType())) {
-                req.abort();
-            } else {
-                req.continue();
-            }
-        });
+        // Set the viewport to control the visible area (above-the-fold)
+        await page.setViewport({ width: 1920, height: 1080 });
 
         console.log("Navigating to:", url);
-        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+        await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
         console.log("Navigation complete.");
 
-        console.log("Taking screenshot...");
-        await page.setViewport({ width: 1920, height: 1080 });
+        console.log("Taking above-the-fold screenshot...");
         const screenshot = await page.screenshot({ type: "png" });
         console.log("Screenshot taken!");
 
         res.setHeader("Content-Type", "image/png");
         res.send(screenshot);
     } catch (error) {
-        console.error("Error while taking screenshot:", error.message);
+        console.error("Error:", error.message);
         res.status(500).json({ error: "An error occurred while taking the screenshot" });
     } finally {
         if (browser) {
