@@ -4,6 +4,6 @@
   "main": "api/screenshot.js",
   "license": "MIT",
   "dependencies": {
-    "puppeteer": "^20.0.0"
+    "puppeteer": "^22.8.2"
   }
 }
