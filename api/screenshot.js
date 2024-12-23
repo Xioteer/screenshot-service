@@ -18,8 +18,21 @@ module.exports = async (req, res) => {
         });
 
         const page = await browser.newPage();
-        await page.goto(url, { waitUntil: 'networkidle2' });
 
+        // Optimize resource loading
+        await page.setRequestInterception(true);
+        page.on('request', (req) => {
+            if (['stylesheet', 'image', 'media', 'font'].includes(req.resourceType())) {
+                req.abort();
+            } else {
+                req.continue();
+            }
+        });
+
+        // Load page with timeout
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 5000 });
+
+        // Take screenshot
         const screenshot = await page.screenshot({ type: 'png' });
 
         await browser.close();
@@ -27,7 +40,7 @@ module.exports = async (req, res) => {
         res.setHeader('Content-Type', 'image/png');
         res.send(screenshot);
     } catch (error) {
-        console.error('Error taking screenshot:', error);
+        console.error('Error while taking screenshot:', error);
         res.status(500).json({ error: "An error occurred while taking the screenshot" });
     }
 };
