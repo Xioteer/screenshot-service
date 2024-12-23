@@ -1,9 +1,9 @@
-const { PuppeteerBlocker } = require('@cliqz/adblocker-puppeteer');
+const { PuppeteerBlocker } = require('@ghostery/adblocker-puppeteer');
 const fetch = require('cross-fetch'); // Required for adblocker
 const puppeteer = require('puppeteer-core');
 const chromium = require('@sparticuz/chromium');
+const express = require('express');
 
-const express = require("express");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
