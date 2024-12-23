@@ -1,0 +1,9 @@
+{
+  "name": "screenshot-service",
+  "version": "1.0.0",
+  "main": "api/screenshot.js",
+  "license": "MIT",
+  "dependencies": {
+    "puppeteer": "^20.0.0"
+  }
+}
