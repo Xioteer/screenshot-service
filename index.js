@@ -1,6 +1,8 @@
 const express = require("express");
 const puppeteer = require("puppeteer-core");
 const chromium = require("@sparticuz/chromium");
+const { PuppeteerBlocker } = require("@ghostery/adblocker-puppeteer");
+const fetch = require("cross-fetch"); // Required by the adblocker
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -26,14 +28,64 @@ app.get("/screenshot", async (req, res) => {
 
         const page = await browser.newPage();
 
-        // Set the viewport to control the visible area (above-the-fold)
-        await page.setViewport({ width: 1920, height: 1080 });
+        // Set up the adblocker
+        console.log("Loading adblocker...");
+        const blocker = await PuppeteerBlocker.fromPrebuiltAdsAndTracking(fetch);
+        blocker.enableBlockingInPage(page);
+        console.log("Adblocker enabled.");
+
+        // Block unnecessary resources to speed up page load
+        await page.setRequestInterception(true);
+        page.on("request", (req) => {
+            const blockedResources = ["stylesheet", "image", "media", "font", "script"];
+            if (blockedResources.includes(req.resourceType())) {
+                req.abort();
+            } else {
+                req.continue();
+            }
+        });
+
+        // Set viewport for above-the-fold content only
+        await page.setViewport({ width: 1920, height: 720 });
+
+        // Set a realistic User-Agent string
+        await page.setUserAgent(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        );
+
+        // Disable animations and transitions
+        await page.evaluateOnNewDocument(() => {
+            const style = document.createElement("style");
+            style.innerHTML = `
+                * {
+                    animation: none !important;
+                    transition: none !important;
+                }
+            `;
+            document.head.appendChild(style);
+        });
 
         console.log("Navigating to:", url);
-        await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
         console.log("Navigation complete.");
 
-        console.log("Taking above-the-fold screenshot...");
+        // Optimize DOM rendering for above-the-fold content
+        await page.evaluate(() => {
+            const elements = document.querySelectorAll("*");
+            elements.forEach((el) => {
+                const rect = el.getBoundingClientRect();
+                if (
+                    rect.bottom < 0 ||
+                    rect.right < 0 ||
+                    rect.top > window.innerHeight ||
+                    rect.left > window.innerWidth
+                ) {
+                    el.style.display = "none";
+                }
+            });
+        });
+
+        console.log("Taking screenshot...");
         const screenshot = await page.screenshot({ type: "png" });
         console.log("Screenshot taken!");
 
