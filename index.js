@@ -2,7 +2,7 @@ const express = require("express");
 const puppeteer = require("puppeteer-core");
 const chromium = require("@sparticuz/chromium");
 const { PuppeteerBlocker } = require("@ghostery/adblocker-puppeteer");
-const fetch = require("cross-fetch"); // Required by the adblocker
+const fetch = require("cross-fetch");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,23 +21,24 @@ app.get("/screenshot", async (req, res) => {
             args: chromium.args,
             defaultViewport: chromium.defaultViewport,
             executablePath: await chromium.executablePath(),
-            headless: chromium.headless,
+            headless: true, // Change to false if testing
             ignoreHTTPSErrors: true,
         });
         console.log("Browser launched.");
 
         const page = await browser.newPage();
 
-        // Set up the adblocker
+        // Enable adblocker
         console.log("Loading adblocker...");
         const blocker = await PuppeteerBlocker.fromPrebuiltAdsAndTracking(fetch);
         blocker.enableBlockingInPage(page);
         console.log("Adblocker enabled.");
 
-        // Block unnecessary resources to speed up page load
+        // Allow CSS and JavaScript, but block heavy resources
         await page.setRequestInterception(true);
         page.on("request", (req) => {
-            const blockedResources = ["stylesheet", "image", "media", "font", "script"];
+            console.log("Requesting:", req.url());
+            const blockedResources = ["image", "media", "font"]; // Allow CSS and JS
             if (blockedResources.includes(req.resourceType())) {
                 req.abort();
             } else {
@@ -45,45 +46,20 @@ app.get("/screenshot", async (req, res) => {
             }
         });
 
-        // Set viewport for above-the-fold content only
+        // Set viewport
         await page.setViewport({ width: 1920, height: 720 });
 
-        // Set a realistic User-Agent string
+        // Set User-Agent
         await page.setUserAgent(
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
         );
 
-        // Disable animations and transitions
-        await page.evaluateOnNewDocument(() => {
-            const style = document.createElement("style");
-            style.innerHTML = `
-                * {
-                    animation: none !important;
-                    transition: none !important;
-                }
-            `;
-            document.head.appendChild(style);
-        });
-
         console.log("Navigating to:", url);
-        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
+        await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
         console.log("Navigation complete.");
 
-        // Optimize DOM rendering for above-the-fold content
-        await page.evaluate(() => {
-            const elements = document.querySelectorAll("*");
-            elements.forEach((el) => {
-                const rect = el.getBoundingClientRect();
-                if (
-                    rect.bottom < 0 ||
-                    rect.right < 0 ||
-                    rect.top > window.innerHeight ||
-                    rect.left > window.innerWidth
-                ) {
-                    el.style.display = "none";
-                }
-            });
-        });
+        // Wait for a specific element (e.g., body) to render fully
+        await page.waitForSelector("body");
 
         console.log("Taking screenshot...");
         const screenshot = await page.screenshot({ type: "png" });
