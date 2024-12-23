@@ -22,7 +22,20 @@ app.get("/screenshot", async (req, res) => {
         });
 
         const page = await browser.newPage();
-        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 10000 });
+
+        // Optimize resource loading
+        await page.setRequestInterception(true);
+        page.on("request", (req) => {
+            if (["stylesheet", "image", "media", "font"].includes(req.resourceType())) {
+                req.abort();
+            } else {
+                req.continue();
+            }
+        });
+
+        console.log("Navigating to:", url);
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+        console.log("Navigation complete");
 
         const screenshot = await page.screenshot({ type: "png" });
 
