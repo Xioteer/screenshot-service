@@ -1,7 +1,9 @@
-const express = require("express");
-const puppeteer = require("puppeteer-core");
-const chromium = require("@sparticuz/chromium");
+const { PuppeteerBlocker } = require('@cliqz/adblocker-puppeteer');
+const fetch = require('cross-fetch'); // Required for adblocker
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 
+const express = require("express");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -24,21 +26,24 @@ app.get("/screenshot", async (req, res) => {
         });
 
         const page = await browser.newPage();
+
+        // Use adblocker
+        const blocker = await PuppeteerBlocker.fromPrebuiltAdsAndTracking(fetch);
+        blocker.enableBlockingInPage(page);
+
         console.log("Navigating to:", url);
         await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
         console.log("Navigation complete");
 
-        // Set viewport and take screenshot
-        console.log("Starting to take a screenshot...");
+        console.log("Taking screenshot...");
         await page.setViewport({ width: 1920, height: 1080 });
         const screenshot = await page.screenshot({ type: "png" });
         console.log("Screenshot taken!");
 
-        // Send the response
         res.setHeader("Content-Type", "image/png");
         res.send(screenshot);
     } catch (error) {
-        console.error("Error while taking screenshot:", error.message);
+        console.error("Error:", error.message);
         res.status(500).json({ error: "An error occurred while taking the screenshot" });
     } finally {
         if (browser) {
