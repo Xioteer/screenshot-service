@@ -1,4 +1,5 @@
-const chromium = require('chrome-aws-lambda');
+const chromium = require('@sparticuz/chromium');
+const puppeteer = require('puppeteer-core');
 
 module.exports = async (req, res) => {
     try {
@@ -8,11 +9,11 @@ module.exports = async (req, res) => {
             return res.status(400).json({ error: "URL is required" });
         }
 
-        // Launch browser using chrome-aws-lambda
-        const browser = await chromium.puppeteer.launch({
+        // Launch browser using @sparticuz/chromium
+        const browser = await puppeteer.launch({
+            executablePath: await chromium.executablePath(),
             args: chromium.args,
             defaultViewport: chromium.defaultViewport,
-            executablePath: await chromium.executablePath || '/usr/bin/chromium-browser',
             headless: chromium.headless,
         });
 
