@@ -1,8 +1,6 @@
-const { PuppeteerBlocker } = require('@ghostery/adblocker-puppeteer');
-const fetch = require('cross-fetch'); // Required for adblocker
-const puppeteer = require('puppeteer-core');
-const chromium = require('@sparticuz/chromium');
-const express = require('express');
+const express = require("express");
+const puppeteer = require("puppeteer-core");
+const chromium = require("@sparticuz/chromium");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -24,16 +22,24 @@ app.get("/screenshot", async (req, res) => {
             headless: chromium.headless,
             ignoreHTTPSErrors: true,
         });
+        console.log("Browser launched.");
 
         const page = await browser.newPage();
 
-        // Use adblocker
-        const blocker = await PuppeteerBlocker.fromPrebuiltAdsAndTracking(fetch);
-        blocker.enableBlockingInPage(page);
+        // Optimize resource loading
+        await page.setRequestInterception(true);
+        page.on("request", (req) => {
+            const blockedTypes = ["stylesheet", "image", "media", "font", "script"];
+            if (blockedTypes.includes(req.resourceType())) {
+                req.abort();
+            } else {
+                req.continue();
+            }
+        });
 
         console.log("Navigating to:", url);
-        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
-        console.log("Navigation complete");
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+        console.log("Navigation complete.");
 
         console.log("Taking screenshot...");
         await page.setViewport({ width: 1920, height: 1080 });
@@ -43,7 +49,7 @@ app.get("/screenshot", async (req, res) => {
         res.setHeader("Content-Type", "image/png");
         res.send(screenshot);
     } catch (error) {
-        console.error("Error:", error.message);
+        console.error("Error while taking screenshot:", error.message);
         res.status(500).json({ error: "An error occurred while taking the screenshot" });
     } finally {
         if (browser) {
