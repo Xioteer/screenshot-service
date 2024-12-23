@@ -1,4 +1,4 @@
-const puppeteer = require('puppeteer');
+const chromium = require('chrome-aws-lambda');
 
 module.exports = async (req, res) => {
     try {
@@ -8,8 +8,12 @@ module.exports = async (req, res) => {
             return res.status(400).json({ error: "URL is required" });
         }
 
-        const browser = await puppeteer.launch({
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        // Launch the browser using chrome-aws-lambda
+        const browser = await chromium.puppeteer.launch({
+            args: chromium.args,
+            defaultViewport: chromium.defaultViewport,
+            executablePath: await chromium.executablePath,
+            headless: true
         });
 
         const page = await browser.newPage();
