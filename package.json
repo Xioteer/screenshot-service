@@ -4,6 +4,8 @@
   "main": "api/screenshot.js",
   "license": "MIT",
   "dependencies": {
-    "puppeteer": "^22.8.2"
+    "puppeteer": "^22.8.2",
+    "puppeteer-core": "^20.9.0",
+    "chrome-aws-lambda": "^10.1.0"
   }
 }
